@@ -1,12 +1,10 @@
 /**
- * fetch-proj-db.ts
+ * proj-db.ts
  *
  * Downloads the latest `proj.db` (the PROJ/EPSG definitions SQLite database)
  * by pulling it out of the latest pyproj wheel published on PyPI.
  *
- * Usage:
- *   npx tsx fetch-proj-db.ts [outputDir]
- *
+ 
  * Requires: adm-zip (npm install adm-zip @types/adm-zip)
  */
 
@@ -52,8 +50,7 @@ function pickWheel(urls: PyPiUrlEntry[]): PyPiUrlEntry {
   return preferred;
 }
 
-export async function fetchProjDb() {
-  const outDir = process.argv[2] ?? DEFAULT_OUTPUT_DIR;
+export async function fetchProjDb(outDir = DEFAULT_OUTPUT_DIR) {
   fs.mkdirSync(outDir, { recursive: true });
 
   console.log('Fetching pyproj release metadata from PyPI...');
