@@ -112,7 +112,8 @@ async function fetchAllCodes(projDb?: DatabaseSync) {
 
       let proj4WithAxis: string | null = null;
       try {
-        const proj4Axis = projDb ? `+axis=${toProj4Axis(getAxisInfo(projDb, id.code))}` : '';
+        const proj4AxisStr = projDb ? toProj4Axis(getAxisInfo(projDb, id.code)) : null;
+        const proj4Axis = proj4AxisStr ? `+axis=${proj4AxisStr}` : '';
         proj4WithAxis = exports?.proj4 ? `${exports?.proj4} ${proj4Axis}`.trim() : null;
       } catch (err) {
         console.warn(`Failed to get axis info for EPSG:${id.code}:`, err);

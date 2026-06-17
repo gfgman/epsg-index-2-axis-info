@@ -40,13 +40,15 @@
     "adm-zip": "^0.5.17",
     "prettier": "^3.8.4",
     "proj4": "^2.20.9",
-    "tsx": "^4.20.3"
+    "tsx": "^4.20.3",
+    "vitest": "^4.1.9"
   },
   "scripts": {
     "update-index": "tsx tools/update-index.ts",
     "check-grids": "tsx tools/check-grids.ts",
     "build": "tsx tools/build.ts",
     "prepublishOnly": "npm run build",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:unit": "vitest --run"
   }
 }

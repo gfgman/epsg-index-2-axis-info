@@ -23,16 +23,13 @@ function isAxisInfoArray(arr: unknown): arr is AxisInfo[] {
   return Array.isArray(arr) && arr.every(isAxisInfo);
 }
 
-interface AxisInfo {
-  name: string;
-  abbrev: string;
-  orientation: string;
-  coordinate_system_order: number;
-  unit_name: string;
-  conv_factor: number;
-}
-
-export function getAxisInfo(db: DatabaseSync, epsgCode: number): AxisInfo[] {
+/**
+ * Get axis information for a given EPSG code from the proj.db SQLite database.
+ * @param projDb - the SQLite database connection to proj.db
+ * @param epsgCode - the EPSG code of the CRS to get axis info for
+ * @returns an array of axis info objects, sorted by coordinate_system_order
+ */
+export function getAxisInfo(projDb: DatabaseSync, epsgCode: number): AxisInfo[] {
   const query = `
     SELECT
       a.name,
@@ -71,27 +68,66 @@ export function getAxisInfo(db: DatabaseSync, epsgCode: number): AxisInfo[] {
     ORDER BY coordinate_system_order
   `;
 
-  const rows = db.prepare(query).all(String(epsgCode), String(epsgCode));
+  const rows = projDb.prepare(query).all(String(epsgCode), String(epsgCode));
 
   return isAxisInfoArray(rows) ? rows : [];
 }
 
-export function toProj4Axis(axes: AxisInfo[]) {
-  const orientationMap: Record<string, string> = {
-    east: 'e',
-    west: 'w',
-    north: 'n',
-    south: 's',
-    up: 'u',
-    down: 'd',
-  };
+interface AxisInfo {
+  name: string;
+  abbrev: string;
+  orientation: string;
+  coordinate_system_order: number;
+  unit_name: string;
+  conv_factor: number;
+}
 
+// Orientations that don't correspond to a proj4 +axis direction at all
+// (geocentric, spherical, unspecified, etc.) — these CRS types shouldn't use +axis.
+const NON_AXIS_ORIENTATIONS = new Set(['geocentricX', 'geocentricY', 'geocentricZ', 'unspecified']);
+const AXIS_ORIENTATION_MAP = {
+  east: 'e',
+  west: 'w',
+  north: 'n',
+  south: 's',
+  up: 'u',
+  down: 'd',
+} as const;
+type Orientation = keyof typeof AXIS_ORIENTATION_MAP;
+const ORIENTATION_KEY_SET = Object.keys(AXIS_ORIENTATION_MAP);
+
+function getOrientation(axis: AxisInfo): Orientation | null {
+  const orientation = axis.orientation.toLowerCase();
+  if (orientation in AXIS_ORIENTATION_MAP) {
+    return orientation as Orientation;
+  } else if (orientation.startsWith('north')) {
+    return 'north';
+  } else if (orientation.startsWith('south')) {
+    return 'south';
+  } else if (orientation.startsWith('east')) {
+    return 'east';
+  } else if (orientation.startsWith('west')) {
+    return 'west';
+  } else if (orientation.startsWith('up')) {
+    return 'up';
+  } else if (orientation.startsWith('down')) {
+    return 'down';
+  }
+  return null;
+}
+
+export function toProj4Axis(axes: AxisInfo[]) {
   const sorted = [...axes].sort((a, b) => a.coordinate_system_order - b.coordinate_system_order);
+
+  // If any axis uses a non-compass orientation, +axis doesn't apply for this CRS
+  if (sorted.some((a) => NON_AXIS_ORIENTATIONS.has(a.orientation))) {
+    return null;
+  }
 
   // proj4js always expects a 3-char string, pad with 'u' (up) if 2D
   const chars = sorted.map((a) => {
-    const key = a.orientation.toLowerCase();
-    const char = orientationMap[key];
+    const orientation = getOrientation(a);
+    const char = orientation && AXIS_ORIENTATION_MAP[orientation];
     if (!char) throw new Error(`Unknown axis orientation: "${a.orientation}"`);
     return char;
   });

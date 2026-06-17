@@ -3,9 +3,6 @@
  *
  * Downloads the latest `proj.db` (the PROJ/EPSG definitions SQLite database)
  * by pulling it out of the latest pyproj wheel published on PyPI.
- *
- 
- * Requires: adm-zip (npm install adm-zip @types/adm-zip)
  */
 
 import * as fs from 'fs';
